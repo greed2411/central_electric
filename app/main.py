@@ -5,7 +5,7 @@ import pydantic
 from sqlalchemy.orm import Session
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 
-from . import crud, models, schemas, utils
+from . import crud, models, schemas, utils, producer
 from .database import SessionLocal, engine
 
 
@@ -59,13 +59,6 @@ def read_devices(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
     return devices
 
 
-# @app.post("/devices/{device_id}/loss_event/", response_model=schemas.LossEvent)
-# def create_lossevent_for_device(
-#     device_id: int, lossevent: schemas.LossEventCreate, db: Session = Depends(get_db)
-# ):
-#     return crud.create_device_lossevent(db=db, lossevent=lossevent, device_id=device_id)
-
-
 @app.websocket("/device/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: int, db: Session = Depends(get_db)):
 
@@ -79,8 +72,10 @@ async def websocket_endpoint(websocket: WebSocket, device_id: int, db: Session =
             device = crud.get_device(db=db, device_id=device_id)
             lapse_interest = utils.calculate_lapse_interest(device, lossevent)
             _ = crud.create_device_lossevent(db=db, lossevent=lossevent, device_id=device_id)
-            _ = crud.update_device(db=db, device_id=device_id, lapse_interest=lapse_interest)
-            await websocket.send_json({**lossevent_dict, "message": "updated", "device_id": device_id})
+            updated_device = crud.update_device(db=db, device_id=device_id, lapse_interest=lapse_interest)
+            stream_payload = utils.prepare_stream_payload(updated_device, lossevent_dict)
+            producer.send_lossevent_into_rmq(stream_payload)
+            await websocket.send_json({**lossevent_dict})
 
     except WebSocketDisconnect:
         print(f"device: {device_id} dropped connection!")
@@ -98,16 +93,19 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int = None):
     try:
         
         while True:
-            # websocket incoming only from rmq
-            published_lossevent_dict = await websocket.receive_json()
+            # websocket incoming only from worker
+            published_lossevent_dict = await websocket.receive_json()   
             to_update_user_id = published_lossevent_dict["user_id"]
-            to_update_user_websocket = websocket_connection_manager[to_update_user_id]
-            # websocket outgoing only to end-user
-            await to_update_user_websocket.send_json({**published_lossevent_dict})
+
+            if to_update_user_id in websocket_connection_manager.keys():
+                to_update_user_websocket = websocket_connection_manager[to_update_user_id]
+                # websocket outgoing only to end-user
+                await to_update_user_websocket.send_json(published_lossevent_dict)
 
     except WebSocketDisconnect:
-        print(f"user: {user_id} dropped connection!")
-        published_lossevent_dict.pop(user_id, None)
+        if user_id:
+            print(f"user: {user_id} dropped connection!")
+            websocket_connection_manager.pop(user_id, None)
 
 
 
