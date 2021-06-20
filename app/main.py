@@ -1,6 +1,4 @@
-import json
 from typing import Dict, List
-import pydantic
 
 from sqlalchemy.orm import Session
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -106,7 +104,3 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int = None):
         if user_id:
             print(f"user: {user_id} dropped connection!")
             websocket_connection_manager.pop(user_id, None)
-
-
-
-
