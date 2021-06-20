@@ -11,7 +11,7 @@ So a just a wishful thinking project 🧞, that one day we can get paid during t
 The name of the project comes out as a play-of-word from the organization [General Electric](https://en.wikipedia.org/wiki/General_Electric), and the new and upcoming decentralized [oracle](https://en.wikipedia.org/wiki/Blockchain_oracle) based blockchain systems.
 
 
-Developed these kind of thoughts ([decentralized insurance use case](https://blog.aeternity.com/blockchain-oracles-657f134ffbc0)) after the witnessing [aeternity's first hackathon](https://humandefihaeck.devpost.com/). The project from that point-of-view is, you get paid 🤑 whenever sensors/io detect that there is a powercut.
+Developed these kind of thoughts ([decentralized insurance use case](https://blog.aeternity.com/blockchain-oracles-657f134ffbc0)) after witnessing [æternity's first hackathon](https://humandefihaeck.devpost.com/). The project from that point-of-view is, you get paid 🤑 whenever sensors/io detect that there is a powercut.
 
 
 ## Application
@@ -49,6 +49,6 @@ This is a [good article](https://ably.com/topic/websockets-kafka#transport-proto
 
 ## BTW
 
-I thought this would scale fine, but encountered a bottleneck, the websocket opened by `consumer` with `server` doesn't last forever / long-lived. Ran into [Broken Pipe Error](https://stackoverflow.com/questions/4584904/what-causes-the-broken-pipe-error), since there was a situation even thought the websocket connection was global, there was rabbitmq's callback happening on every event payload. which started messing it up. therefore, the `consumer` establishes new websocket connection with the server on new events (lol ik).
+I thought this would scale fine, but encountered a bottleneck, the websocket opened by `consumer` with `server` doesn't last forever / long-lived. Ran into [Broken Pipe Error](https://stackoverflow.com/questions/4584904/what-causes-the-broken-pipe-error) 🧑‍🔧, since there was a situation even thought the websocket connection was global, there was rabbitmq's callback happening on every event payload. which started messing it up. therefore, the `consumer` establishes new websocket connection with the server on new events (lol ik).
 
 I still wanted to refactor this project with pure async coroutines for handling new requests, but meh. the pure `def` sync functions are called [using a threadpool](https://fastapi.tiangolo.com/async/?h=sync#very-technical-details), so i assume it's fine for now.
